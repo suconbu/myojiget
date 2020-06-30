@@ -51,24 +51,18 @@ def get_myoji_from_html(text:str) -> dict:
     #         ~~~~~~~~~~~~~~~~~~~~~~~~~
     result["myojiYomis"] = bsPosts[0].select_one("p.meta").get_text()[4:].split(",")
 
-    if len(result["myojiYomis"]) == 0:
-        return {}
-
     bsRankAndCount = bsPosts[1].select_one("p").get_text()
 
     # 【全国順位】 12位
     #              ~~
-    match = re.search('(\d+)位', bsRankAndCount)
-    if not match:
-        return {}
-    result["rankInCountry"] = int(match.group(1))
-
     # 【全国人数】 およそ814,000人
     #                    ~~~~~~~
-    match = re.search('([\d,]+)人', bsRankAndCount)
-    if not match:
+    rank_match = re.search('(\d+)位', bsRankAndCount)
+    count_match = re.search('([\d,]+)人', bsRankAndCount)
+    if not rank_match or not count_match:
         return {}
-    result["countInCountry"] = int(match.group(1).replace(",", ""))
+    result["rankInCountry"] = int(rank_match.group(1))
+    result["countInCountry"] = int(count_match.group(1).replace(",", ""))
 
     # 名字の由来
     bsMyojiOrigin = bsPosts[2].select_one("div.box > div.myojiComments")
@@ -97,17 +91,19 @@ def get_myoji(myoji:str) -> dict:
         dict: 名字情報
 
     名字情報:
-        myoujiKanji: 名字漢字
-        myoujiYomis: 名字よみのリスト
+        myojiKanji: 名字漢字
+        myojiYomis: 名字よみのリスト
         rankInCountry: 全国人数順位
         countInCountry: 全国人数
         myojiOrigin: 名字由来文(複数行テキスト)
         myojiOriginDetailUri: 名字由来詳細ページのURI
     """
-    result = None
     uri = Setting.myoji_uri_base.replace("{myoji}", myoji)
-    text = get_textcontent(uri)
-    return get_myoji_from_html(text)
+    try:
+        text = get_textcontent(uri)
+        return get_myoji_from_html(text)
+    except Exception as e:
+        return {}
 
 def main(argv):
     ap = argparse.ArgumentParser()
