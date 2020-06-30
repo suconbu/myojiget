@@ -6,7 +6,20 @@ import sys
 import json
 import requests
 import argparse
+import unicodedata
 from bs4 import BeautifulSoup
+
+class Setting(object):
+    cache_dir = f"{os.path.expanduser('~')}/.myojiget_cache"
+    myoji_uri_base = "https://myoji-yurai.net/searchResult.htm?myojiKanji={myoji}"
+    origin_not_registered = "の解説はまだ登録されていません。"
+
+def zenlen(s):
+    sw = 0
+    for c in s:
+        cw = unicodedata.east_asian_width(c)
+        sw += 2 if (cw == 'F' or cw == 'W' or cw == "A") else 1
+    return sw
 
 def get_textcontent(uri: str) -> str:
     text = ""
@@ -24,11 +37,6 @@ def get_textcontent(uri: str) -> str:
 
 def get_bsoup(text: str) -> BeautifulSoup:
     return BeautifulSoup(text, "html.parser")
-
-class Setting(object):
-    cache_dir = f"{os.path.expanduser('~')}/.myojiget_cache"
-    myoji_uri_base = "https://myoji-yurai.net/searchResult.htm?myojiKanji={myoji}"
-    origin_not_registered = "の解説はまだ登録されていません。"
 
 def str_to_codepointstr(text:str) -> str:
     return "_".join([str(ord(c)) for c in text])
@@ -139,9 +147,28 @@ def get_myoji(myoji:str, use_cache:bool=True) -> dict:
     except Exception as e:
         return {}
 
+def to_text(myoji:dict) -> str:
+    text = f"""\
+{myoji['myojiKanji']}さんは全国におよそ「{myoji['countInCountry']:#,}人」います。
+人数の多さでは全国第「{myoji['rankInCountry']}位」です。
+読み方には「{", ".join(myoji['myojiYomis'])}」などがあります。
+"""
+    myojiOrigin = myoji['myojiOrigin']
+    if myojiOrigin:
+        lenmax = max(zenlen(s) for s in myojiOrigin.split("\n"))
+        text += f"""
+名字の由来解説:
+{"-" * lenmax}
+{myojiOrigin}
+{"-" * lenmax}
+詳しくは {myoji['myojiOriginDetailUri']} をご覧ください。
+"""
+    return text
+
 def main(argv):
     ap = argparse.ArgumentParser()
     ap.add_argument("--nocache", action="store_true")
+    ap.add_argument("--text", action="store_true")
     ap.add_argument("myoji", nargs="?")
     args = ap.parse_args(argv[1:])
 
@@ -150,7 +177,10 @@ def main(argv):
 
     myoji_result = get_myoji(args.myoji, not args.nocache)
     if myoji_result:
-        print(json.dumps(myoji_result, indent=2, ensure_ascii=False))
+        if args.text:
+            print(to_text(myoji_result))
+        else:
+            print(json.dumps(myoji_result, indent=2, ensure_ascii=False))
 
 if __name__ == "__main__":
     main(sys.argv)
