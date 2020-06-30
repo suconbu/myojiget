@@ -105,6 +105,8 @@ def get_myoji_from_html(text:str) -> dict:
     if bsMyojiOrigin.a:
         result["myojiOriginDetailUri"] = bsMyojiOrigin.a["href"]
         bsMyojiOrigin.a.decompose()
+    else:
+        result['myojiOriginDetailUri'] = None
     for br in bsMyojiOrigin.select("br"):
         br.replace_with("\n")
     myoji_origin = bsMyojiOrigin.get_text().strip()
@@ -141,7 +143,7 @@ def get_myoji(myoji:str, use_cache:bool=True) -> dict:
         if result is None:
             text = get_textcontent(uri)
             result = get_myoji_from_html(text)
-            if use_cache and result is not None:
+            if result is not None:
                 set_myojicache(myoji, result)
         return result
     except Exception as e:
@@ -161,6 +163,9 @@ def to_text(myoji:dict) -> str:
 {"-" * lenmax}
 {myojiOrigin}
 {"-" * lenmax}
+"""
+    if myoji['myojiOriginDetailUri']:
+        text += f"""\
 詳しくは {myoji['myojiOriginDetailUri']} をご覧ください。
 """
     return text
