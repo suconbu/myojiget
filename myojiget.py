@@ -93,11 +93,11 @@ def get_myoji_from_html(text:str) -> dict:
     #              ~~
     # 【全国人数】 およそ814,000人
     #                    ~~~~~~~
-    rank_match = re.search('(\d+)位', bsRankAndCount)
+    rank_match = re.search('([\d,]+)位', bsRankAndCount)
     count_match = re.search('([\d,]+)人', bsRankAndCount)
     if not rank_match or not count_match:
         return {}
-    result["rankInCountry"] = int(rank_match.group(1))
+    result["rankInCountry"] = int(rank_match.group(1).replace(",", ""))
     result["countInCountry"] = int(count_match.group(1).replace(",", ""))
 
     # 名字の由来
@@ -151,8 +151,8 @@ def get_myoji(myoji:str, use_cache:bool=True) -> dict:
 
 def to_text(myoji:dict) -> str:
     text = f"""\
-{myoji['myojiKanji']}さんは全国におよそ「{myoji['countInCountry']:#,}人」います。
-人数の多さでは全国第「{myoji['rankInCountry']}位」です。
+{myoji['myojiKanji']}さんは全国におよそ「{myoji['countInCountry']:,d}人」います。
+人数の多さでは全国第「{myoji['rankInCountry']:,d}位」です。
 読み方には「{", ".join(myoji['myojiYomis'])}」などがあります。
 """
     myojiOrigin = myoji['myojiOrigin']
