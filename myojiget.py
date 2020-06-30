@@ -26,8 +26,36 @@ def get_bsoup(text: str) -> BeautifulSoup:
     return BeautifulSoup(text, "html.parser")
 
 class Setting(object):
+    cache_dir = f"{os.path.expanduser('~')}/.myojiget_cache"
     myoji_uri_base = "https://myoji-yurai.net/searchResult.htm?myojiKanji={myoji}"
     origin_not_registered = "の解説はまだ登録されていません。"
+
+def str_to_codepointstr(text:str) -> str:
+    return "_".join([str(ord(c)) for c in text])
+
+def get_myojicache_path(myoji:str) -> str:
+    return os.path.join(Setting.cache_dir, "myoji", f"myoji_{str_to_codepointstr(myoji)}.json")
+
+def get_myojicache(myoji:str) -> dict:
+    try:
+        cache_path = get_myojicache_path(myoji)
+        if os.path.exists(cache_path):
+            with open(cache_path, "r") as f:
+                return json.load(f)
+    except Exception as e:
+        pass
+    return None
+
+def set_myojicache(myoji:str, result:dict):
+    try:
+        cache_path = get_myojicache_path(myoji)
+        cache_dir = os.path.dirname(cache_path)
+        if not os.path.exists(cache_dir):
+            os.makedirs(cache_dir)
+        with open(cache_path, "w") as f:
+            json.dump(result, f, ensure_ascii=False)
+    except Exception as e:
+        pass
 
 def get_myoji_from_html(text:str) -> dict:
     """
@@ -79,13 +107,14 @@ def get_myoji_from_html(text:str) -> dict:
 
     return result
 
-def get_myoji(myoji:str) -> dict:
+def get_myoji(myoji:str, use_cache:bool=True) -> dict:
     """
     指定された名字に該当する名字情報を取得します。
     該当する名字情報がない時は空の辞書を返します。
 
     Args:
         myoji (str): 名字文字列
+        use_cache (bool): キャッシュ使用有無 (既定値:True)
 
     Returns:
         dict: 名字情報
@@ -100,20 +129,26 @@ def get_myoji(myoji:str) -> dict:
     """
     uri = Setting.myoji_uri_base.replace("{myoji}", myoji)
     try:
-        text = get_textcontent(uri)
-        return get_myoji_from_html(text)
+        result = get_myojicache(myoji) if use_cache else None
+        if result is None:
+            text = get_textcontent(uri)
+            result = get_myoji_from_html(text)
+            if use_cache and result is not None:
+                set_myojicache(myoji, result)
+        return result
     except Exception as e:
         return {}
 
 def main(argv):
     ap = argparse.ArgumentParser()
+    ap.add_argument("--nocache", action="store_true")
     ap.add_argument("myoji", nargs="?")
     args = ap.parse_args(argv[1:])
 
     if not args.myoji:
         return
 
-    myoji_result = get_myoji(args.myoji)
+    myoji_result = get_myoji(args.myoji, not args.nocache)
     if myoji_result:
         print(json.dumps(myoji_result, indent=2, ensure_ascii=False))
 

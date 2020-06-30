@@ -23,8 +23,9 @@ def main(argv):
     rows = rows.split()
     cols = cols.split()
     rmax = max(zenlen(row) for row in rows)
-    print(f" {' ' * rmax} |{'|'.join(map(lambda c: f' {c:^{10 - (zenlen(c) - len(c))}} ', cols))}")
-    print(f"-{'-' * rmax}-|{'|'.join(map(lambda c: '------------', cols))}")
+    cmax = 10
+    print(f" {' ' * rmax} |{'|'.join(map(lambda c: f' {c:^{cmax - (zenlen(c) - len(c))}} ', cols))}")
+    print(f"-{'-' * rmax}-|{'|'.join(map(lambda c: '-' * (cmax + 2), cols))}")
     for row in rows:
         counts = []
         print(f" {row:>{rmax - (zenlen(row) - len(row))}}", end="", flush=True)
@@ -34,8 +35,8 @@ def main(argv):
             for colsub in colsubs:
                 myoji = row + colsub
                 result = myojiget.get_myoji(myoji)
-                count += result['countInCountry'] if 0 < len(result) else 0
-            print(f" | {count:>10,d}", end="", flush=True)
+                count += result['countInCountry'] if result else 0
+            print(f" | {count:>{cmax},d}", end="", flush=True)
         print()
 
 if __name__ == "__main__":
