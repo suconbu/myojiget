@@ -23,12 +23,16 @@ def main(argv):
         print(f" {row:>{rmax - (myojiget.zenlen(row) - len(row))}}", end="", flush=True)
         for col in cols:
             colsubs = col.split("|")
-            count = 0
-            for colsub in colsubs:
-                myoji = row + colsub
-                result = myojiget.get_myoji(myoji)
-                count += result['countInCountry'] if result else 0
-            print(f" | {count:>{cmax},d}", end="", flush=True)
+            try:
+                count = 0
+                for colsub in colsubs:
+                    myoji = row + colsub
+                    result = myojiget.get_myoji(myoji)
+                    count += result['countInCountry'] if result else 0
+                cell = f"{count:>{cmax},d}"
+            except Exception as e:
+                cell = f"{'-':^{cmax}}"
+            print(f" | {cell}", end="", flush=True)
         print()
 
 if __name__ == "__main__":

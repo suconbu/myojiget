@@ -23,16 +23,13 @@ def zenlen(s):
 
 def get_textcontent(uri: str) -> str:
     text = ""
-    try:
-        if uri.startswith("file:"):
-            with open(uri[5:], "r", encoding="utf-8") as f:
-                text = f.read()
-        else:
-            response = requests.get(uri)
-            response.encoding = response.apparent_encoding
-            text = response.text
-    except:
-        pass
+    if uri.startswith("file:"):
+        with open(uri[5:], "r", encoding="utf-8") as f:
+            text = f.read()
+    else:
+        response = requests.get(uri)
+        response.encoding = response.apparent_encoding
+        text = response.text
     return text
 
 def get_bsoup(text: str) -> BeautifulSoup:
@@ -138,16 +135,13 @@ def get_myoji(myoji:str, use_cache:bool=True) -> dict:
         myojiOriginDetailUri: 名字由来詳細ページのURI
     """
     uri = Setting.myoji_uri_base.replace("{myoji}", myoji)
-    try:
-        result = get_myojicache(myoji) if use_cache else None
-        if result is None:
-            text = get_textcontent(uri)
-            result = get_myoji_from_html(text)
-            if result is not None:
-                set_myojicache(myoji, result)
-        return result
-    except Exception as e:
-        return {}
+    result = get_myojicache(myoji) if use_cache else None
+    if result is None:
+        text = get_textcontent(uri)
+        result = get_myoji_from_html(text)
+        if result is not None:
+            set_myojicache(myoji, result)
+    return result
 
 def to_text(myoji:dict) -> str:
     text = f"""\
@@ -180,12 +174,16 @@ def main(argv):
     if not args.myoji:
         return
 
-    myoji_result = get_myoji(args.myoji, not args.nocache)
-    if myoji_result:
-        if args.text:
-            print(to_text(myoji_result))
+    try:
+        myoji_result = get_myoji(args.myoji, not args.nocache)
+        if myoji_result:
+            if args.text:
+                print(to_text(myoji_result))
+            else:
+                print(json.dumps(myoji_result, indent=2, ensure_ascii=False))
         else:
-            print(json.dumps(myoji_result, indent=2, ensure_ascii=False))
-
+            print(f"「{args.myoji}」に該当する名字情報はありませんでした", file=sys.stderr)
+    except Exception as e:
+        print("名字情報が取得できませんでした...", file=sys.stderr)
 if __name__ == "__main__":
     main(sys.argv)
